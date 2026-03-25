@@ -1,0 +1,160 @@
+# VHK游戏陪玩小程序后端服务配置文件
+# 作者：VKHbug团队
+# 官方链接：https://vkhbug-team.vercel.app
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  tomcat:
+    uri-encoding: UTF-8
+    max-threads: 200
+    accept-count: 100
+
+spring:
+  application:
+    name: vhk-gamecompanion
+  
+  # 开发环境配置
+  profiles:
+    active: dev
+  
+  # MongoDB数据库配置
+  data:
+    mongodb:
+      uri: mongodb://admin:Admin%40123456@192.168.1.39:27017,192.168.1.2:27017,192.168.1.181:27017/vhk_game?replicaSet=rs0&authSource=admin&readPreference=primary
+      auto-index-creation: true
+    
+    # Redis缓存配置
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      database: 0
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+  
+  # 缓存配置
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+  
+  # Jackson JSON配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+  
+  # 文件上传配置
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 20MB
+  
+  # 开发工具配置
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+
+# JWT认证配置
+jwt:
+  secret: vhk-gamecompanion-jwt-secret-key-2024-vkhbug-team-secure
+  expiration: 604800000
+  header: Authorization
+  prefix: Bearer
+
+# 微信小程序配置
+wechat:
+  miniprogram:
+    appid: your-wechat-appid
+    secret: your-wechat-secret
+    grant-type: authorization_code
+  # 微信支付配置
+  pay:
+    app-id: your-wechat-appid
+    mch-id: your-mch-id
+    api-key: your-api-key
+    merchant-serial-number: your-merchant-serial-number
+    private-key-path: classpath:cert/apiclient_key.pem
+    api-v3-key: your-api-v3-key
+    notify-url: https://your-domain.com/api/pay/callback
+
+# Swagger API文档配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  info:
+    title: VHK游戏陪玩小程序API文档
+    description: VHK游戏陪玩小程序后端服务API接口文档
+    version: 1.0.0
+    contact:
+      name: VKHbug团队
+      url: https://vkhbug-team.vercel.app
+      email: support@vhkbug.team
+
+# 日志配置
+logging:
+  level:
+    root: info
+    com.vhk.gamecompanion: debug
+    org.springframework.data.mongodb: debug
+    org.springframework.data.redis: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+  file:
+    name: logs/vhk-gamecompanion.log
+    max-size: 10MB
+    max-history: 30
+
+# 应用自定义配置
+app:
+  # 分页配置
+  page:
+    default-page: 1
+    default-size: 10
+    max-size: 100
+  
+  # 文件存储配置
+  storage:
+    location: ./uploads
+    allowed-types: jpg,jpeg,png,gif,mp4,mp3
+  
+  # 安全配置
+  security:
+    ignore-urls:
+      - /swagger-ui/**
+      - /v3/api-docs/**
+      - /auth/**
+      - /public/**
+      - /ws/**
+  
+  # WebSocket配置
+  websocket:
+    path: /ws/chat
+    allowed-origins: "*"
+    heartbeat-interval: 30000
