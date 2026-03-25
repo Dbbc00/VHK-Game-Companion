@@ -1,0 +1,140 @@
+# VHK游戏陪玩小程序Docker Compose配置
+# 作者：VKHbug团队
+# 官方链接：https://vkhbug-team.vercel.app
+# 版本：1.0.0
+
+version: '3.8'
+
+services:
+  # 后端服务
+  backend:
+    build:
+      context: ./vhk-backend
+      dockerfile: Dockerfile
+    container_name: vhk-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # MongoDB配置
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/vhk_game
+      # Redis配置
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      # JVM参数
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC
+    volumes:
+      # 日志持久化
+      - ./logs/backend:/app/logs
+      # 上传文件持久化
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - vhk-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # 管理后台前端服务
+  admin:
+    build:
+      context: ./vhk-admin
+      dockerfile: Dockerfile
+    container_name: vhk-admin
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - vhk-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB数据库
+  mongodb:
+    image: mongo:7.0
+    container_name: vhk-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      # 数据库初始化配置
+      - MONGO_INITDB_DATABASE=vhk_game
+    volumes:
+      # 数据持久化
+      - mongodb_data:/data/db
+      # 初始化脚本
+      - ./vhk-backend/src/main/resources/db:/docker-entrypoint-initdb.d
+    networks:
+      - vhk-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis缓存服务
+  redis:
+    image: redis:7.2-alpine
+    container_name: vhk-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      # 数据持久化
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - vhk-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx反向代理（生产环境使用）
+  nginx:
+    image: nginx:alpine
+    container_name: vhk-nginx
+    ports:
+      - "443:443"
+      - "8888:80"
+    volumes:
+      # Nginx配置文件
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # SSL证书目录
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      # 日志目录
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - backend
+      - admin
+    networks:
+      - vhk-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+# 数据卷定义
+volumes:
+  mongodb_data:
+    driver: local
+    name: vhk_mongodb_data
+  redis_data:
+    driver: local
+    name: vhk_redis_data
+
+# 网络定义
+networks:
+  vhk-network:
+    driver: bridge
+    name: vhk-network
